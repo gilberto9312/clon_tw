@@ -1,11 +1,11 @@
 use actix_web::{get, post, web::{ Data, Path }, HttpResponse};
 use chrono::{NaiveDateTime, Utc};
-use diesel::{r2d2::{Pool, ConnectionManager}, PgConnection, QueryDsl};
+use diesel::{ r2d2::{ Pool, ConnectionManager }, PgConnection, QueryDsl };
 use uuid::Uuid;
 use super::schema::tweets;
 use diesel::{Insertable, Queryable, RunQueryDsl};
 use serde::{Serialize, Deserialize};
-use crate::utils::response_utils_created;
+use crate::utils::{ response_utils_created,response_utils_ok };
 
 
 #[derive(Insertable, Queryable, Serialize, Deserialize, Debug)]
@@ -26,7 +26,7 @@ impl Tweet {
 }
 
 #[get("/tweets/{id}")]
-pub async fn get_tweet_by_id(path: Path<(String)>, pool: Data<Pool<ConnectionManager<PgConnection>>>) -> HttpResponse {
+pub async fn get_tweet_by_id(path: Path<String>, pool: Data<Pool<ConnectionManager<PgConnection>>>) -> HttpResponse {
     use crate::schema::tweets::dsl::*;
     let mut conn = pool.get().expect("it can't connect database");
     let t_id = &path.into_inner();
@@ -47,9 +47,7 @@ pub async fn get_tweet_by_id(path: Path<(String)>, pool: Data<Pool<ConnectionMan
     match result {
         Ok(rows) => match rows.first() {
             Some(tweet) => {
-              HttpResponse::Ok()
-              .content_type("application/json")
-              .json(tweet)
+                response_utils_ok(tweet)
             },
             _ => {
               HttpResponse::NotFound().await.unwrap()
