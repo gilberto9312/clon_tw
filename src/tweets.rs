@@ -25,6 +25,32 @@ impl Tweet {
     }
 }
 
+#[get("/tweets")]
+pub async fn get_tweets(pool: Data<Pool<ConnectionManager<PgConnection>>>) -> HttpResponse {
+    use crate::schema::tweets::dsl::*;
+
+    let mut conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            println!("Error connecting to the database: {:?}", e);
+            return HttpResponse::InternalServerError().json("Error connecting to the database");
+        },
+    };
+    let result = tweets.load::<Tweet>(&mut conn);
+    match result {
+        Ok(tweet) =>  {
+                response_utils_ok(&tweet)
+        },
+        Err(e) => {
+            println!("{:?}",e);
+            HttpResponse::NotFound().await.unwrap()
+        },
+        
+    }
+
+}
+
+
 #[get("/tweets/{id}")]
 pub async fn get_tweet_by_id(path: Path<String>, pool: Data<Pool<ConnectionManager<PgConnection>>>) -> HttpResponse {
     use crate::schema::tweets::dsl::*;

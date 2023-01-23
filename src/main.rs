@@ -22,8 +22,9 @@ async fn main() -> std::io::Result<()> {
         App::new()
         .app_data(web::Data::new(pool.clone()))
         .wrap(middleware::Logger::default())
-        .service(tweets::get_tweet_by_id)
+        .service(tweets::get_tweets)
         .service(tweets::create_tweet)
+        .service(tweets::get_tweet_by_id)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
