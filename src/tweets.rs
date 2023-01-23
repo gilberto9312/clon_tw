@@ -1,12 +1,10 @@
-use actix_web::{get, post, web::{self, Data}, Responder, HttpResponse};
-
+use actix_web::{get, post, web::{ Data, Path }, HttpResponse};
 use chrono::{NaiveDateTime, Utc};
-use diesel::{r2d2::{Pool, ConnectionManager}, PgConnection};
+use diesel::{r2d2::{Pool, ConnectionManager}, PgConnection, QueryDsl};
 use uuid::Uuid;
 use super::schema::tweets;
 use diesel::{Insertable, Queryable, RunQueryDsl};
 use serde::{Serialize, Deserialize};
-
 use crate::utils::response_utils_created;
 
 
@@ -28,8 +26,38 @@ impl Tweet {
 }
 
 #[get("/tweets/{id}")]
-pub async fn get_tweet_by_id(id: web::Path<String>) -> impl Responder {
-    format!("Hello {id}!")
+pub async fn get_tweet_by_id(path: Path<(String)>, pool: Data<Pool<ConnectionManager<PgConnection>>>) -> HttpResponse {
+    use crate::schema::tweets::dsl::*;
+    let mut conn = pool.get().expect("it can't connect database");
+    let t_id = &path.into_inner();
+    let t_id_uuid: Uuid;
+    match Uuid::parse_str(t_id) {
+        Ok(t_id_uuid_result) => {
+            // Do something with the Uuid
+            t_id_uuid = t_id_uuid_result;
+            println!("{:?}",t_id_uuid_result);
+        }
+        Err(e) => {
+            println!("tweet id invalid, error: {:?}", e);
+            return HttpResponse::NotFound().await.unwrap();
+        }
+    }
+    
+    let result = tweets.find(t_id_uuid).load::<Tweet>(&mut conn);
+    match result {
+        Ok(rows) => match rows.first() {
+            Some(tweet) => {
+              HttpResponse::Ok()
+              .content_type("application/json")
+              .json(tweet)
+            },
+            _ => {
+              HttpResponse::NotFound().await.unwrap()
+            },
+        },
+        Err(_) => HttpResponse::NotFound().await.unwrap(),
+    }
+
 }
 
 #[post("/tweets")]
